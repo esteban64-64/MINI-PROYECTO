@@ -1,0 +1,11 @@
+Metadata-Version: 2.4
+Name: ai-knowledge-assistant
+Version: 0.1.0
+Summary: Enterprise AI Knowledge Assistant
+Requires-Python: >=3.12
+Requires-Dist: fastapi[standard]
+Requires-Dist: pydantic
+Requires-Dist: httpx
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: pytest-asyncio; extra == "dev"
