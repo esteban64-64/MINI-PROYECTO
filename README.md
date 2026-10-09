@@ -1,6 +1,6 @@
 # AI Knowledge Assistant
 
-API asíncrona para el curso de Ingeniería de Sistemas de IA - Módulo 0.
+API asíncrona para el curso ADSO sena - Módulo 0.
 
 Este proyecto es el primer incremento funcional del AI Knowledge Assistant: una API REST asíncrona con FastAPI, preparada para evolucionar hacia un sistema de IA real en módulos posteriores.
 
