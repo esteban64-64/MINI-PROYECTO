@@ -225,7 +225,7 @@ Este proyecto es la base técnica. En módulos posteriores se integrará:
 
 ## 🤝 Contribución
 
-Este es un proyecto educativo para el curso de Ingeniería de Sistemas de IA.
+Este es un proyecto educativo para el curso ADSO sena.
 
 ## 📄 Licencia
 
