@@ -1,16 +1,20 @@
 import pytest
-from app.services.assistance_service import BootstrapAssistantService
+
+from app.services.assistant_service import SYSTEM_PROMPT, AssistantService
+from tests.fakes import FakeLLMProvider
+
 
 @pytest.mark.asyncio
-async def test_service_responds_to_known_question():
-    service = BootstrapAssistantService()
-    response = await service.answer("¿Qué es FastAPI?")
-    assert "FastAPI" in response.answer
-    assert response.provider == "bootstrap-local"
+async def test_service_builds_system_and_user_messages():
+    provider = FakeLLMProvider()
+    service = AssistantService(provider)
 
-@pytest.mark.asyncio
-async def test_service_responds_to_unknown_question():
-    service = BootstrapAssistantService()
-    response = await service.answer("¿Cómo está el clima?")
-    assert "API está operativa" in response.answer
-    assert response.provider == "bootstrap-local"
+    result = await service.ask("¿Qué es un LLM?", temperature=0.5, top_p=0.9, max_tokens=100)
+
+    assert result.content == "Respuesta simulada"
+    call = provider.calls[0]
+    assert call["messages"] == [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": "¿Qué es un LLM?"},
+    ]
+    assert (call["temperature"], call["top_p"], call["max_tokens"]) == (0.5, 0.9, 100)

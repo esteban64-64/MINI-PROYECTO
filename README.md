@@ -1,6 +1,6 @@
 # AI Knowledge Assistant
 
-API asíncrona para el curso ADSO sena - Módulo 0.
+API asíncrona para el curso ADSO sena - Módulo I (integración LLM con OpenRouter).
 
 Este proyecto es el primer incremento funcional del AI Knowledge Assistant: una API REST asíncrona con FastAPI, preparada para evolucionar hacia un sistema de IA real en módulos posteriores.
 
@@ -56,6 +56,11 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
+### 4. Configurar OpenRouter
+
+Copia `.env.example` a `.env` y coloca tu clave (`OPENROUTER_API_KEY`). `.env` está en `.gitignore`.
+Para los experimentos fija un modelo concreto en `OPENROUTER_MODEL` (`openrouter/free` puede enrutar a distintos modelos).
+
 ## 🏃 Ejecución
 
 ### Iniciar el servidor de desarrollo
@@ -109,25 +114,33 @@ Health check de la API.
 ```
 
 ### POST /api/v1/chat
-Endpoint para enviar preguntas al asistente.
+Envía la pregunta al LLM a través de OpenRouter.
 
 **Request:**
 ```json
 {
-  "question": "¿Qué es FastAPI?"
+  "question": "¿Qué es un LLM?",
+  "temperature": 0.3,
+  "top_p": 1.0,
+  "max_tokens": 300
 }
 ```
 
-**Validación:**
-- `question`: Mínimo 3 caracteres, máximo 2000 caracteres
+**Validación (422 si falla, sin llamar al LLM):**
+- `question`: 3 a 2000 caracteres
+- `temperature`: 0 a 1.5 (por defecto 0.3)
+- `top_p`: mayor que 0 y hasta 1 (por defecto 1.0)
+- `max_tokens`: 1 a 2000 (por defecto 300)
 
-**Response:**
+**Response 200:**
 ```json
 {
-  "answer": "FastAPI es un framework de Python para construir APIs basado en type hints y ASGI.",
-  "provider": "bootstrap-local"
+  "answer": "Un LLM es...",
+  "model": "<modelo efectivamente servido>"
 }
 ```
+
+**Response 502:** error controlado del proveedor (timeout, HTTP 429/5xx, respuesta sin `choices`, falta de API key).
 
 ### GET /api/v1/info
 Información básica del proyecto.
@@ -136,47 +149,44 @@ Información básica del proyecto.
 ```json
 {
   "name": "AI Knowledge Assistant",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "environment": "development",
-  "llm_enabled": false
+  "llm_enabled": true,
+  "model": "openrouter/free"
 }
 ```
 
 ## 📁 Estructura del Proyecto
 
 ```
-ai-knowledge-assistant/
-├── app/
-│   ├── __init__.py
-│   ├── main.py                 # Aplicación FastAPI principal
-│   ├── api/
-│   │   ├── __init__.py
-│   │   └── routes/
-│   │       ├── __init__.py
-│   │       ├── health.py       # Endpoint /health
-│   │       ├── chat.py         # Endpoint /api/v1/chat
-│   │       └── info.py         # Endpoint /api/v1/info
-│   ├── schemas/
-│   │   ├── __init__.py
-│   │   ├── health.py           # Modelos Pydantic para health
-│   │   └── chat.py             # Modelos Pydantic para chat
-│   └── services/
-│       ├── __init__.py
-│       └── assistance_service.py  # Lógica de negocio del asistente
-├── scripts/
-│   └── asyncio_demo.py         # Demostración de AsyncIO
-├── tests/
-│   ├── __init__.py
-│   ├── unit/
-│   │   ├── __init__.py
-│   │   └── test_assistant_service.py  # Pruebas unitarias
-│   └── integration/
-│       ├── __init__.py
-│       └── test_api.py         # Pruebas de integración
-├── .gitignore
-├── pyproject.toml              # Configuración del proyecto y dependencias
-└── README.md
+app/
+├── main.py                       # Aplicación FastAPI
+├── api/
+│   ├── chat.py                   # Router POST /api/v1/chat (Depends + 502)
+│   └── routes/
+│       ├── health.py             # GET /health
+│       └── info.py               # GET /api/v1/info
+├── core/config.py                # Lectura de .env (API key, modelo, timeout)
+├── schemas/chat.py               # Pydantic: question, temperature, top_p, max_tokens
+├── services/assistant_service.py # System prompt + orquestación
+└── providers/
+    ├── base.py                   # Contrato LLMProvider, LLMResult, LLMProviderError
+    └── openrouter.py             # Adaptador HTTPX hacia OpenRouter
+tests/
+├── fakes.py                      # FakeLLMProvider
+├── unit/                         # Servicio y adaptador (MockTransport: timeout, 429, sin choices)
+└── integration/test_api.py       # 200, 422 y 502 sin consumo externo
+scripts/
+├── asyncio_demo.py
+└── httpx_demo.py
 ```
+
+## 🔄 Flujo de una solicitud
+
+Cliente/Swagger → Router (`app/api/chat.py`) → Pydantic (`app/schemas/chat.py`, 422) →
+Service (`app/services/assistant_service.py`) → Contrato (`app/providers/base.py`) →
+Adaptador HTTPX (`app/providers/openrouter.py`) → OpenRouter/LLM → respuesta por las mismas capas
+(error del proveedor → `LLMProviderError` → 502).
 
 ## 🔑 Conceptos Clave
 
@@ -207,21 +217,18 @@ Cliente HTTP moderno con soporte síncrono y asíncrono:
 - **Git**: Sistema de control de versiones local
 - **GitHub**: Servicio de hosting de repositorios Git en la nube
 
-## 🎯 Próximos Pasos (Módulos Futuros)
+## 🎯 Próximos Pasos
 
-Este proyecto es la base técnica. En módulos posteriores se integrará:
-- ✗ LLM real (OpenAI, Anthropic, etc.)
+- ✔ LLM real vía OpenRouter (Módulo I)
 - ✗ RAG (Retrieval-Augmented Generation)
 - ✗ Bases vectoriales
 - ✗ Agentes
-- ✗ Observabilidad
+- ✗ Observabilidad (tokens y costo)
 
 ## 📝 Notas Importantes
 
-- Este proyecto **NO** integra LLMs reales todavía
-- La lógica del asistente usa respuestas predefinidas (bootstrap)
-- Todas las pruebas deben pasar antes de entregar
-- El repositorio no contiene secretos ni credenciales
+- La API key se lee de `.env`; nunca se sube al repositorio ni aparece en respuestas de error.
+- Las pruebas usan `FakeLLMProvider` y `httpx.MockTransport`: no consumen OpenRouter.
 
 ## 🤝 Contribución
 
